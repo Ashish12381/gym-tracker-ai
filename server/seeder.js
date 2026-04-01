@@ -1,0 +1,99 @@
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import connectDB from "./config/db.js";
+import Exercise from "./models/Exercise.js";
+
+dotenv.config();
+
+const exercises = [
+
+  // 🔴 CHEST
+  { name: "Bench Press", muscleGroup: "Chest", equipment: "Barbell", type: "strength" },
+  { name: "Incline Bench Press", muscleGroup: "Chest", equipment: "Barbell", type: "strength" },
+  { name: "Decline Bench Press", muscleGroup: "Chest", equipment: "Barbell", type: "strength" },
+  { name: "Dumbbell Bench Press", muscleGroup: "Chest", equipment: "Dumbbell", type: "strength" },
+  { name: "Incline Dumbbell Press", muscleGroup: "Chest", equipment: "Dumbbell", type: "strength" },
+  { name: "Chest Fly", muscleGroup: "Chest", equipment: "Machine", type: "strength" },
+  { name: "Cable Fly", muscleGroup: "Chest", equipment: "Cable", type: "strength" },
+  { name: "Push Ups", muscleGroup: "Chest", equipment: "Bodyweight", type: "bodyweight" },
+  { name: "Dips", muscleGroup: "Chest", equipment: "Bodyweight", type: "bodyweight" },
+
+  // 🔵 BACK
+  { name: "Pull Ups", muscleGroup: "Back", equipment: "Bodyweight", type: "bodyweight" },
+  { name: "Chin Ups", muscleGroup: "Back", equipment: "Bodyweight", type: "bodyweight" },
+  { name: "Lat Pulldown", muscleGroup: "Back", equipment: "Machine", type: "strength" },
+  { name: "Barbell Row", muscleGroup: "Back", equipment: "Barbell", type: "strength" },
+  { name: "Dumbbell Row", muscleGroup: "Back", equipment: "Dumbbell", type: "strength" },
+  { name: "Seated Cable Row", muscleGroup: "Back", equipment: "Cable", type: "strength" },
+  { name: "Deadlift", muscleGroup: "Back", equipment: "Barbell", type: "strength" },
+  { name: "T-Bar Row", muscleGroup: "Back", equipment: "Machine", type: "strength" },
+
+  // 🟢 LEGS
+  { name: "Squat", muscleGroup: "Legs", equipment: "Barbell", type: "strength" },
+  { name: "Front Squat", muscleGroup: "Legs", equipment: "Barbell", type: "strength" },
+  { name: "Leg Press", muscleGroup: "Legs", equipment: "Machine", type: "strength" },
+  { name: "Lunges", muscleGroup: "Legs", equipment: "Bodyweight", type: "bodyweight" },
+  { name: "Walking Lunges", muscleGroup: "Legs", equipment: "Bodyweight", type: "bodyweight" },
+  { name: "Leg Extension", muscleGroup: "Legs", equipment: "Machine", type: "strength" },
+  { name: "Leg Curl", muscleGroup: "Legs", equipment: "Machine", type: "strength" },
+  { name: "Romanian Deadlift", muscleGroup: "Legs", equipment: "Barbell", type: "strength" },
+  { name: "Calf Raises", muscleGroup: "Legs", equipment: "Bodyweight", type: "bodyweight" },
+
+  // 🟡 SHOULDERS
+  { name: "Shoulder Press", muscleGroup: "Shoulders", equipment: "Dumbbell", type: "strength" },
+  { name: "Barbell Shoulder Press", muscleGroup: "Shoulders", equipment: "Barbell", type: "strength" },
+  { name: "Arnold Press", muscleGroup: "Shoulders", equipment: "Dumbbell", type: "strength" },
+  { name: "Lateral Raise", muscleGroup: "Shoulders", equipment: "Dumbbell", type: "strength" },
+  { name: "Front Raise", muscleGroup: "Shoulders", equipment: "Dumbbell", type: "strength" },
+  { name: "Rear Delt Fly", muscleGroup: "Shoulders", equipment: "Dumbbell", type: "strength" },
+  { name: "Face Pull", muscleGroup: "Shoulders", equipment: "Cable", type: "strength" },
+
+  // 🟠 ARMS
+  { name: "Bicep Curl", muscleGroup: "Arms", equipment: "Dumbbell", type: "strength" },
+  { name: "Barbell Curl", muscleGroup: "Arms", equipment: "Barbell", type: "strength" },
+  { name: "Hammer Curl", muscleGroup: "Arms", equipment: "Dumbbell", type: "strength" },
+  { name: "Preacher Curl", muscleGroup: "Arms", equipment: "Machine", type: "strength" },
+  { name: "Tricep Pushdown", muscleGroup: "Arms", equipment: "Cable", type: "strength" },
+  { name: "Skull Crushers", muscleGroup: "Arms", equipment: "Barbell", type: "strength" },
+  { name: "Overhead Tricep Extension", muscleGroup: "Arms", equipment: "Dumbbell", type: "strength" },
+  { name: "Close Grip Bench Press", muscleGroup: "Arms", equipment: "Barbell", type: "strength" },
+
+  // 🟣 CORE
+  { name: "Plank", muscleGroup: "Core", equipment: "Bodyweight", type: "bodyweight" },
+  { name: "Crunches", muscleGroup: "Core", equipment: "Bodyweight", type: "bodyweight" },
+  { name: "Leg Raises", muscleGroup: "Core", equipment: "Bodyweight", type: "bodyweight" },
+  { name: "Russian Twist", muscleGroup: "Core", equipment: "Bodyweight", type: "bodyweight" },
+  { name: "Hanging Leg Raise", muscleGroup: "Core", equipment: "Bodyweight", type: "bodyweight" },
+
+  // 🔥 CARDIO / ATHLETIC (IMPORTANT UPGRADE)
+  { name: "Running", muscleGroup: "Cardio", equipment: "None", type: "cardio" },
+  { name: "Sprinting", muscleGroup: "Cardio", equipment: "None", type: "cardio" },
+  { name: "Cycling", muscleGroup: "Cardio", equipment: "Machine", type: "cardio" },
+  { name: "Jump Rope", muscleGroup: "Cardio", equipment: "Bodyweight", type: "cardio" },
+  { name: "Rowing Machine", muscleGroup: "Cardio", equipment: "Machine", type: "cardio" },
+
+  // ⚡ FUNCTIONAL / ATHLETIC
+  { name: "Burpees", muscleGroup: "Full Body", equipment: "Bodyweight", type: "bodyweight" },
+  { name: "Mountain Climbers", muscleGroup: "Full Body", equipment: "Bodyweight", type: "bodyweight" },
+  { name: "Box Jumps", muscleGroup: "Legs", equipment: "Bodyweight", type: "bodyweight" },
+  { name: "Farmer Walk", muscleGroup: "Full Body", equipment: "Dumbbell", type: "strength" },
+
+];
+
+const importData = async () => {
+  try {
+    await connectDB();
+
+    await Exercise.deleteMany();
+
+    await Exercise.insertMany(exercises);
+
+    console.log("Exercises Seeded Successfully 💪🔥");
+    process.exit();
+  } catch (error) {
+    console.error(error);
+    process.exit(1);
+  }
+};
+
+importData();
