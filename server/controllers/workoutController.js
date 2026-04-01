@@ -1,23 +1,62 @@
+import mongoose from "mongoose";
 import Workout from "../models/Workout.js";
+import Exercise from "../models/Exercise.js";
 
 const hasMeaningfulSetValues = (set) =>
   ["weight", "reps", "distance", "duration"].some(
     (field) => typeof set[field] === "number" && !Number.isNaN(set[field])
   );
 
-const normalizeExercises = (exercises = []) =>
-  exercises
-    .map((exercise) => ({
+const resolveExerciseId = async (exerciseValue) => {
+  if (!exerciseValue || typeof exerciseValue !== "string") {
+    return null;
+  }
+
+  if (mongoose.Types.ObjectId.isValid(exerciseValue)) {
+    return exerciseValue;
+  }
+
+  const trimmedName = exerciseValue.trim();
+
+  if (!trimmedName) {
+    return null;
+  }
+
+  const existingExercise = await Exercise.findOne({
+    name: { $regex: `^${trimmedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" },
+  });
+
+  if (existingExercise) {
+    return existingExercise._id.toString();
+  }
+
+  const createdExercise = await Exercise.create({
+    name: trimmedName,
+    muscleGroup: "Custom",
+    equipment: "Custom",
+    type: "strength",
+  });
+
+  return createdExercise._id.toString();
+};
+
+const normalizeExercises = async (exercises = []) => {
+  const normalized = await Promise.all(
+    exercises.map(async (exercise) => ({
       ...exercise,
+      exercise: await resolveExerciseId(exercise.exercise),
       sets: (exercise.sets || []).filter(hasMeaningfulSetValues),
     }))
-    .filter((exercise) => exercise.exercise && exercise.sets.length > 0);
+  );
+
+  return normalized.filter((exercise) => exercise.exercise && exercise.sets.length > 0);
+};
 
 export const createWorkout = async (req, res) => {
   try {
     const { date, exercises } = req.body;
     const userId = req.user.id;
-    const normalizedExercises = normalizeExercises(exercises);
+    const normalizedExercises = await normalizeExercises(exercises);
 
     if (normalizedExercises.length === 0) {
       return res.status(400).json({ message: "At least one valid set is required" });
@@ -195,7 +234,7 @@ export const updateWorkout = async (req, res) => {
       return res.status(404).json({ message: "Workout not found" });
     }
 
-    workout.exercises = normalizeExercises(exercises);
+    workout.exercises = await normalizeExercises(exercises);
 
     await workout.save();
 
