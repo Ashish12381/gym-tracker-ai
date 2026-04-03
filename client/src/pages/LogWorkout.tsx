@@ -30,6 +30,11 @@ function LogWorkout() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [workout, setWorkout] = useState<WorkoutExercise[]>([]);
   const [hasWorkoutToday, setHasWorkoutToday] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const [exerciseStats, setExerciseStats] = useState<
     Record<string, ExerciseStats>
   >({});
@@ -91,6 +96,7 @@ function LogWorkout() {
 
   // ➕ Add Exercise
   const addExercise = () => {
+    setSaveMessage(null);
     setWorkout((prev) => [
       ...prev,
       { exercise: "", sets: [{} as WorkoutSet] },
@@ -99,6 +105,7 @@ function LogWorkout() {
 
   // 🔄 Update Exercise
   const updateExercise = (index: number, value: string) => {
+    setSaveMessage(null);
     const updated = [...workout];
     updated[index].exercise = value;
     setWorkout(updated);
@@ -106,6 +113,7 @@ function LogWorkout() {
 
   // ➕ Add Set
   const addSet = (index: number) => {
+    setSaveMessage(null);
     const updated = [...workout];
     updated[index].sets.push({} as WorkoutSet);
     setWorkout(updated);
@@ -144,6 +152,7 @@ function LogWorkout() {
     field: keyof WorkoutSet,
     value: number | ""
   ) => {
+    setSaveMessage(null);
     const updated = [...workout];
 
     updated[exIndex].sets[setIndex] = {
@@ -156,7 +165,14 @@ function LogWorkout() {
 
   // 💾 Save Workout
   const handleSaveWorkout = async () => {
+    if (isSaving) {
+      return;
+    }
+
     try {
+      setIsSaving(true);
+      setSaveMessage(null);
+
       const cleanedExercises = workout
         .map((ex) => ({
           exercise: ex.exercise,
@@ -172,7 +188,10 @@ function LogWorkout() {
         .filter((ex) => ex.exercise && ex.sets.length > 0);
 
       if (cleanedExercises.length === 0) {
-        alert("Add at least one complete set before saving.");
+        setSaveMessage({
+          type: "error",
+          text: "Add at least one complete set before saving.",
+        });
         return;
       }
 
@@ -181,11 +200,20 @@ function LogWorkout() {
         exercises: cleanedExercises,
       });
 
-      alert("Workout saved 💪");
+      setSaveMessage({
+        type: "success",
+        text: "Workout saved successfully.",
+      });
       setWorkout([]);
+      setHasWorkoutToday(true);
     } catch (err) {
       console.error(err);
-      alert("Error saving workout");
+      setSaveMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Error saving workout",
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -472,7 +500,8 @@ function LogWorkout() {
                 {/* ADD SET */}
                 <button
                   onClick={() => addSet(exIndex)}
-                  className="mt-3 text-blue-400"
+                  disabled={isSaving}
+                  className="mt-3 text-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   + Add Set
                 </button>
@@ -481,11 +510,30 @@ function LogWorkout() {
           })}
         </div>
 
+        {saveMessage && (
+          <div
+            className={`rounded-xl border px-4 py-3 text-sm ${
+              saveMessage.type === "success"
+                ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100"
+                : "border-rose-400/20 bg-rose-500/10 text-rose-100"
+            }`}
+          >
+            {saveMessage.text}
+          </div>
+        )}
+
+        {isSaving && (
+          <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-100">
+            Saving workout. Please wait...
+          </div>
+        )}
+
         {/* SAVE BUTTON */}
         {workout.length > 0 && (
           <button
             onClick={handleSaveWorkout}
-            className="w-full py-4 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:opacity-90 transition"
+            disabled={isSaving}
+            className="w-full rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 py-4 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             💾 Save Workout
           </button>

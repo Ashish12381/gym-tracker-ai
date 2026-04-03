@@ -23,18 +23,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const initialize = async () => {
-      try {
-        const status = await getRegistrationStatus();
-        setRegistrationOpen(status.registrationOpen);
+      const storedToken = getStoredToken();
 
-        if (!getStoredToken()) {
+      try {
+        try {
+          const status = await getRegistrationStatus();
+          setRegistrationOpen(status.registrationOpen);
+        } catch {
+          setRegistrationOpen(true);
+        }
+
+        if (!storedToken) {
           return;
         }
 
         const currentUser = await getCurrentUser();
         setUser(currentUser);
       } catch {
-        setStoredToken(null);
+        if (storedToken) {
+          setStoredToken(null);
+        }
         setUser(null);
       } finally {
         setIsLoading(false);
